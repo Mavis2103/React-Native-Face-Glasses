@@ -11,7 +11,7 @@ buildscript {
         ndkVersion = "23.1.7779620"
         
         // React Native Vision Camera required
-        kotlinVersion = "1.6.20"
+        // kotlinVersion = "1.6.20"
     }
     repositories {
         google()
@@ -19,7 +19,7 @@ buildscript {
         mavenLocal()
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:7.3.1")
+        classpath("com.android.tools.build:gradle:7.4.1")
         classpath("com.facebook.react:react-native-gradle-plugin")
     }
 }
@@ -29,5 +29,12 @@ allprojects {
         google()
         mavenCentral()
         mavenLocal()
+        // * Your other repositories here *
+
+        // * Add a new maven block after other repositories / blocks *
+        maven {
+            // expo-camera bundles a custom com.google.android:cameraview
+            url "$rootDir/../node_modules/expo-camera/android/maven"
+        }
     }
 }

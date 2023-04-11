@@ -1,107 +1,139 @@
-import {runOnJS} from 'react-native-reanimated';
-
 import {StyleSheet, View, Dimensions} from 'react-native';
-import {useCameraDevices, useFrameProcessor} from 'react-native-vision-camera';
+import {Button, Text} from 'react-native';
 
-import {Camera} from 'react-native-vision-camera';
-import {useEffect, useState} from 'react';
-import {scanFaces, Face} from 'vision-camera-face-detector';
+import {useState} from 'react';
 import {Rect, Canvas, Image, useImage, Group} from '@shopify/react-native-skia';
 
-const {width, height} = Dimensions.get('screen');
-export default function CameraFaceDetector() {
-  const [hasPermission, setHasPermission] = useState(false);
-  const [faces, setFaces] = useState<Face[]>();
-  const img1 = useImage(require('./assets/glasses1.png'));
-  const img2 = useImage(require('./assets/glasses2.png'));
-  const devices = useCameraDevices();
-  const device = devices.front;
+import {Camera, CameraType} from 'expo-camera';
+import {
+  DetectionResult,
+  FaceDetectorMode,
+  FaceDetectorLandmarks,
+  FaceDetectorClassifications,
+  FaceFeature,
+} from 'expo-face-detector';
+const ExpoCamera = () => {
+  const [permission, requestPermission] = Camera.useCameraPermissions();
+  const [faces, setFaces] = useState<FaceFeature[]>([]);
+  const img2 = useImage(require('./assets/glasses1.png'));
+  if (!permission) {
+    // Camera permissions are still loading
+    return <View />;
+  }
 
-  // useEffect(() => {
-  //   if (faces?.length) {
-  //     console.log(faces?.[0].rollAngle);
-  //   }
-  // }, [faces]);
+  if (!permission.granted) {
+    // Camera permissions are not granted yet
+    return (
+      <View style={styles.container}>
+        <Text style={{textAlign: 'center'}}>
+          We need your permission to show the camera
+        </Text>
+        <Button onPress={requestPermission} title="grant permission" />
+      </View>
+    );
+  }
+  const handleFacesDetected = ({faces, image}: DetectionResult) => {
+    if (faces.length) {
+      console.log(faces[0]);
 
-  useEffect(() => {
-    (async () => {
-      const status = await Camera.requestCameraPermission();
-      setHasPermission(status === 'authorized');
-    })();
-  }, []);
-
-  const frameProcessor = useFrameProcessor(frame => {
-    'worklet';
-    const scannedFaces = scanFaces(frame);
-    runOnJS(setFaces)(scannedFaces);
-  }, []);
-
+      setFaces(faces);
+    }
+  };
   return (
-    <>
-      {device != null && hasPermission ? (
-        <Camera
-          style={StyleSheet.absoluteFill}
-          device={device}
-          isActive={true}
-          frameProcessor={frameProcessor}
-          frameProcessorFps={60}
-        />
-      ) : null}
-      {faces?.length ? (
-        <>
-          <Canvas
-            style={{
-              flex: 1,
-            }}>
-            {/* {Object.values(faces[0].contours)
-              .flat(1)
-              .map(({x, y}) => {
-                return (
-                  <Rect
-                    x={faces[0].bounds.width - x + 60}
-                    y={y - 80}
-                    width={3}
-                    height={3}
-                    color="red"
-                  />
-                );
-              })} */}
-            {(() => {
-              const imgW = Math.sqrt(
-                Math.pow(
-                  faces[0].bounds.width -
-                    faces[0].contours.RIGHT_EYE[9].x +
-                    60 -
-                    (faces[0].bounds.width -
-                      faces[0].contours.LEFT_EYE[0].x +
-                      60),
-                  2,
-                ) +
+    <View style={styles.container}>
+      <Camera
+        style={styles.camera}
+        type={CameraType.front}
+        onFacesDetected={handleFacesDetected}
+        faceDetectorSettings={{
+          mode: FaceDetectorMode.accurate,
+          detectLandmarks: FaceDetectorLandmarks.all,
+          runClassifications: FaceDetectorClassifications.all,
+          tracking: true,
+        }}>
+        {faces?.length ? (
+          <>
+            <Canvas
+              style={{
+                flex: 1,
+              }}>
+              {Object.values(faces[0]).map(({x, y}) => {
+                return <Rect x={x} y={y} width={3} height={3} color="red" />;
+              })}
+              <Rect
+                x={(faces[0]['LEFT_EYE'].x + faces[0]['RIGHT_EYE'].x) / 2}
+                y={(faces[0]['LEFT_EYE'].y + faces[0]['RIGHT_EYE'].y) / 2}
+                width={10}
+                height={10}
+                color="blue"
+              />
+              {(() => {
+                const imgW = Math.sqrt(
                   Math.pow(
-                    faces[0].contours.RIGHT_EYE[9].y -
-                      80 -
-                      (faces[0].contours.LEFT_EYE[0].y - 80),
+                    faces[0]['RIGHT_EAR']?.x! - faces[0]['LEFT_EAR']?.x!,
                     2,
-                  ),
-              );
-              return (
-                <Image
-                  image={img2!}
-                  fit="contain"
-                  x={
-                    faces[0].bounds.width -
-                    faces[0].contours.RIGHT_EYE[9].x +
-                    60
-                  }
-                  y={faces[0].contours.RIGHT_EYE[9].y - 80 - 256 / 2}
-                  width={imgW}
-                  height={256}
-                />
-              );
-            })()}
-          </Canvas>
-        </>
-      ) : null}
-    </>
+                  ) +
+                    Math.pow(
+                      faces[0]['RIGHT_EAR']?.y! - faces[0]['LEFT_EAR']?.y!,
+                      2,
+                    ),
+                );
+
+                return (
+                  <Group
+                  // transform={[{translateX: -256 / 2}]}
+                  >
+                    <Image
+                      image={img2!}
+                      fit="contain"
+                      x={
+                        (faces[0]['LEFT_EYE'].x + faces[0]['RIGHT_EYE'].x) / 2 -
+                        imgW / 2
+                      }
+                      y={
+                        (faces[0]['LEFT_EYE'].y + faces[0]['RIGHT_EYE'].y) / 2 -
+                        256 / 2
+                      }
+                      width={imgW}
+                      height={256}
+                    />
+                  </Group>
+                );
+              })()}
+            </Canvas>
+          </>
+        ) : null}
+      </Camera>
+    </View>
   );
+};
+
+export default function App() {
+  return <ExpoCamera />;
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  camera: {
+    flex: 1,
+  },
+  buttonContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: 'transparent',
+    margin: 64,
+  },
+  button: {
+    flex: 1,
+    alignSelf: 'flex-end',
+    alignItems: 'center',
+  },
+  text: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+});

@@ -11,11 +11,13 @@
   },
   "dependencies": {
     "@shopify/react-native-skia": "^0.1.182",
+    "expo": "^48.0.0",
+    "expo-camera": "^13.2.1",
+    "expo-face-detector": "^12.1.1",
     "react": "18.2.0",
     "react-native": "0.71.6",
-    "react-native-reanimated": "2.14.1",
-    "react-native-vision-camera": "^2.15.4",
-    "vision-camera-face-detector": "^0.1.8"
+    "react-native-fast-image": "^8.6.3",
+    "react-native-reanimated": "2.14.1"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
